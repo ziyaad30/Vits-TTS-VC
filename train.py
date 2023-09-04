@@ -324,7 +324,6 @@ def evaluate(hps, generator, eval_loader, writer_eval):
             y = y[:1]
             y_lengths = y_lengths[:1]
             speakers = speakers[:1]
-            out_bar.update(1)
             break
         
         y_hat, attn, mask, *_ = generator.module.infer(x, x_lengths, speakers, max_len=1000)
