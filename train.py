@@ -41,6 +41,8 @@ from losses import (
 )
 from mel_processing import mel_spectrogram_torch, spec_to_mel_torch
 
+import warnings
+warnings.filterwarnings("ignore")
 
 torch.backends.cudnn.benchmark = True
 global_step = 0
