@@ -3,6 +3,8 @@ import json
 import argparse
 import itertools
 import math
+import warnings
+warnings.filterwarnings("ignore")
 import torch
 from torch import nn, optim
 from torch.nn import functional as F
@@ -16,8 +18,6 @@ from tqdm import tqdm
 
 import librosa
 import logging
-
-logging.getLogger('numba').setLevel(logging.WARNING)
 
 import commons
 import utils
@@ -41,8 +41,6 @@ from losses import (
 )
 from mel_processing import mel_spectrogram_torch, spec_to_mel_torch
 
-import warnings
-warnings.filterwarnings("ignore")
 
 torch.backends.cudnn.benchmark = True
 global_step = 0
