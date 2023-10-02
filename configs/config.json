@@ -21,8 +21,8 @@
     "c_kl": 1.0
   },
   "data": {
-    "training_files": "./dataset/test_train.txt",
-    "validation_files": "./dataset/test_val.txt",
+    "training_files":"./ljs/train.txt.cleaned",
+    "validation_files":"./ljs/validate.txt.cleaned",
     "text_cleaners": [
       "english_cleaners"
     ],
