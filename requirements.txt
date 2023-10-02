@@ -11,5 +11,4 @@ jieba
 protobuf
 inflect
 opencc==1.1.1
-phonemizer
-num2words
+deep-phonemizer
