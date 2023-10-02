@@ -180,15 +180,14 @@ def get_hparams(init=True):
     parser = argparse.ArgumentParser()
     parser.add_argument('-c', '--config', type=str, default="./configs/config.json",
                         help='JSON file for configuration')
-    parser.add_argument('-m', '--model', type=str, default="OUTPUT_MODEL",
-                        help='Model name')
-    parser.add_argument('-n', '--max_epochs', type=int, default=5000,
-                        help='max epochs')
-    parser.add_argument('-s', '--max_steps', type=int, default=50000,
-                        help='max steps')
-    parser.add_argument('--preserved', type=int, default=2,
-                        help='Number of preserved models')
-
+    parser.add_argument('-m', '--model', type=str, default="OUTPUT_MODEL", help='Model name')
+    parser.add_argument('-n', '--max_epochs', type=int, default=5000, help='max epochs')
+    parser.add_argument('-s', '--max_steps', type=int, default=100000, help='max steps')
+    parser.add_argument('--preserved', type=int, default=4, help='Number of preserved models')
+    parser.add_argument('-d', '--drop_speaker_embed', action = 'store_true', help='whether to drop existing characters')
+    parser.add_argument('-p', '--use_pretrained_models', action = 'store_true', help='whether to use pretrained models')
+    
+    
     args = parser.parse_args()
     model_dir = os.path.join("./", args.model)
 
@@ -212,6 +211,8 @@ def get_hparams(init=True):
     hparams.max_epochs = args.max_epochs
     hparams.max_steps = args.max_steps
     hparams.preserved = args.preserved
+    hparams.drop_speaker_embed = args.drop_speaker_embed
+    hparams.use_pretrained_models = args.use_pretrained_models
     return hparams
 
 
