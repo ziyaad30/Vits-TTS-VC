@@ -1,4 +1,5 @@
 # Vits-TTS-VC
+NB: This is a modified fork of [VITS-fast-fine-tuning](https://github.com/Plachtaa/VITS-fast-fine-tuning)
 
 ## Tested on Python 3.8.17
 
