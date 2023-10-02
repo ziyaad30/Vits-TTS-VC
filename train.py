@@ -90,30 +90,29 @@ def run(rank, n_gpus, hps):
     # load existing model
     if hps.train.continue_training:
         try:
-            print("Continuing old training session...")
             _, _, _, epoch_str = utils.load_checkpoint(utils.latest_checkpoint_path(hps.model_dir, "G_latest.pth"), net_g, None)
             _, _, _, epoch_str = utils.load_checkpoint(utils.latest_checkpoint_path(hps.model_dir, "D_latest.pth"), net_d, None)
             global_step = (epoch_str - 1) * len(train_loader)
             train_state = True
+            print("Continuing old training session...")
         except:
             pass
         
         if not train_state:
             try:
-                print("Training with model from pretrained_models...")
                 _, _, _, epoch_str = utils.load_checkpoint("./pretrained_models/G_latest.pth", net_g, None, True) # drop pretrained model speaker
                 _, _, _, epoch_str = utils.load_checkpoint("./pretrained_models/D_latest.pth", net_d, None, True) # drop pretrained model speaker
-                epoch_str = 1
-                global_step = 0
+                global_step = (epoch_str - 1) * len(train_loader)
                 train_state = True
+                print("Training with model from pretrained_models...")
             except:
                 pass
         
         if not train_state:
-            print("Training a new model...")
             epoch_str = 1
             global_step = 0
             train_state = True
+            print("Training a new model...")
     else:
         epoch_str = 1
         global_step = 0
