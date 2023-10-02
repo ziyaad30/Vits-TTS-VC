@@ -19,6 +19,8 @@ from tqdm import tqdm
 import librosa
 import logging
 
+logging.getLogger('numba').setLevel(logging.WARNING)
+
 import commons
 import utils
 
@@ -41,6 +43,8 @@ from losses import (
 )
 from mel_processing import mel_spectrogram_torch, spec_to_mel_torch
 
+import warnings
+warnings.filterwarnings("ignore")
 
 torch.backends.cudnn.benchmark = True
 global_step = 0
@@ -86,36 +90,35 @@ def run(rank, n_gpus, hps):
     net_d = MultiPeriodDiscriminator(hps.model.use_spectral_norm).cuda(rank)
     
     train_state = False
+    
+    if hps.use_pretrained_models:
+        try:
+            _, _, _, step = utils.load_checkpoint("./pretrained_models/G_latest.pth", net_g, None, hps.drop_speaker_embed) # drop or keep pretrained model speaker
+            _, _, _, step = utils.load_checkpoint("./pretrained_models/D_latest.pth", net_d, None, hps.drop_speaker_embed) # drop or keep pretrained model speaker
+            global_step = 0
+            train_state = True
+            print("Training with model from pretrained_models...")
+        except:
+            print("No pretrained_models found!")
 
     # load existing model
-    if hps.train.continue_training:
+    else:
         try:
-            _, _, _, epoch_str = utils.load_checkpoint(utils.latest_checkpoint_path(hps.model_dir, "G_latest.pth"), net_g, None)
-            _, _, _, epoch_str = utils.load_checkpoint(utils.latest_checkpoint_path(hps.model_dir, "D_latest.pth"), net_d, None)
-            global_step = (epoch_str - 1) * len(train_loader)
+            _, _, _, step = utils.load_checkpoint(utils.latest_checkpoint_path(hps.model_dir, "G_latest.pth"), net_g, None)
+            _, _, _, step = utils.load_checkpoint(utils.latest_checkpoint_path(hps.model_dir, "D_latest.pth"), net_d, None)
+            
+            if hps.data.n_speakers > 1:
+                print('Training multiple speakers...')
+            
+            global_step = step
             train_state = True
             print("Continuing old training session...")
         except:
-            pass
-        
-        if not train_state:
-            try:
-                _, _, _, epoch_str = utils.load_checkpoint("./pretrained_models/G_latest.pth", net_g, None, True) # drop pretrained model speaker
-                _, _, _, epoch_str = utils.load_checkpoint("./pretrained_models/D_latest.pth", net_d, None, True) # drop pretrained model speaker
-                global_step = (epoch_str - 1) * len(train_loader)
-                train_state = True
-                print("Training with model from pretrained_models...")
-            except:
-                pass
-        
-        if not train_state:
-            epoch_str = 1
+            print("Training a new model...")
             global_step = 0
             train_state = True
-            print("Training a new model...")
-    else:
-        epoch_str = 1
-        global_step = 0
+    
+    epoch_str = 1
         
     # freeze all other layers except speaker embedding
     for p in net_g.parameters():
@@ -255,15 +258,15 @@ def train_and_evaluate(rank, epoch, hps, nets, optims, schedulers, scaler, loade
       if global_step % hps.train.eval_interval == 0:
         evaluate(hps, net_g, eval_loader, writer_eval)
         
-        utils.save_checkpoint(net_g, None, hps.train.learning_rate, epoch,
+        utils.save_checkpoint(net_g, None, hps.train.learning_rate, global_step,
                               os.path.join(hps.model_dir, "G_latest.pth"))
         
-        utils.save_checkpoint(net_d, None, hps.train.learning_rate, epoch,
+        utils.save_checkpoint(net_d, None, hps.train.learning_rate, global_step,
                               os.path.join(hps.model_dir, "D_latest.pth"))
         if hps.preserved > 0:
-          utils.save_checkpoint(net_g, None, hps.train.learning_rate, epoch,
+          utils.save_checkpoint(net_g, None, hps.train.learning_rate, global_step,
                                   os.path.join(hps.model_dir, "G_{}.pth".format(global_step)))
-          utils.save_checkpoint(net_d, None, hps.train.learning_rate, epoch,
+          utils.save_checkpoint(net_d, None, hps.train.learning_rate, global_step,
                                   os.path.join(hps.model_dir, "D_{}.pth".format(global_step)))
           old_g = utils.oldest_checkpoint_path(hps.model_dir, "G_[0-9]*.pth",
                                                preserved=hps.preserved)  # Preserve 4 (default) historical checkpoints.
@@ -291,10 +294,9 @@ def train_and_evaluate(rank, epoch, hps, nets, optims, schedulers, scaler, loade
 
 
 def evaluate(hps, generator, eval_loader, writer_eval):
-    out_bar = tqdm
     generator.eval()
     with torch.no_grad():
-        for batch_idx, (x, x_lengths, spec, spec_lengths, y, y_lengths, speakers) in enumerate(out_bar(eval_loader)):
+        for batch_idx, (x, x_lengths, spec, spec_lengths, y, y_lengths, speakers) in enumerate(eval_loader):
             x, x_lengths = x.cuda(0), x_lengths.cuda(0)
             spec, spec_lengths = spec.cuda(0), spec_lengths.cuda(0)
             y, y_lengths = y.cuda(0), y_lengths.cuda(0)
