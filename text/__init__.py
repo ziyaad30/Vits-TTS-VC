@@ -2,22 +2,29 @@
 from text import cleaners
 from text.symbols import symbols, _pad
 import os
+from dp.phonemizer import Phonemizer
+phonemizer = Phonemizer.from_checkpoint('en_us_cmudict_ipa_forward.pt')
 
 # Mappings from symbol to numeric ID and vice versa:
 _symbol_to_id = {s: i for i, s in enumerate(symbols)}
 _id_to_symbol = {i: s for i, s in enumerate(symbols)}
 
-# load phonemizer
-from phonemizer.backend import EspeakBackend
+def do_ipa(text):
+    text = text.split()
+    new_text = []
+    for t in text:
+        if t.startswith('*'):
+            t = t.replace("*", "")
+            new_text.append(t)
+        else:    
+            t = phoneme_text(t)
+            new_text.append(t)
+    
+    return ' '.join(new_text)
 
-if os.name == 'nt':
-    from phonemizer.backend.espeak.wrapper import EspeakWrapper
-    _ESPEAK_LIBRARY = 'C:\Program Files\eSpeak NG\libespeak-ng.dll'    # For Windows
-    EspeakWrapper.set_library(_ESPEAK_LIBRARY)
 
-def phoneme_text(text, lang="en-us"):
-    backend = EspeakBackend(language=lang, preserve_punctuation=True, with_stress=False, punctuation_marks=';:,.!?¡¿—…"«»“”()', language_switch='remove-flags', words_mismatch='ignore')
-    text = backend.phonemize([text], strip=True)[0]
+def phoneme_text(text, lang='en_us'):
+    text = phonemizer(text, lang)
     return text.strip()
 
 def text_to_sequence(text, symbols, cleaner_names):
