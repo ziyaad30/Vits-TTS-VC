@@ -78,7 +78,7 @@ def run(rank, n_gpus, hps):
     train_dataset = TextAudioSpeakerLoader(hps.data.training_files, hps.data, symbols)
     train_sampler = DistributedBucketSampler(train_dataset, hps.train.batch_size, [32,300,400,500,600,700,800,900,1000], num_replicas=n_gpus, rank=rank, shuffle=True)
     collate_fn = TextAudioSpeakerCollate()
-    train_loader = DataLoader(train_dataset, num_workers=2, shuffle=False, pin_memory=True, collate_fn=collate_fn, batch_sampler=train_sampler)
+    train_loader = DataLoader(train_dataset, num_workers=0, shuffle=False, pin_memory=True, collate_fn=collate_fn, batch_sampler=train_sampler)
 
     if rank == 0:
         eval_dataset = TextAudioSpeakerLoader(hps.data.validation_files, hps.data, symbols)
@@ -92,29 +92,27 @@ def run(rank, n_gpus, hps):
     # load existing model
     if hps.train.continue_training:
         try:
-            print("Continuing training with trained model...")
+            print("Continuing old training session...")
             _, _, _, epoch_str = utils.load_checkpoint(utils.latest_checkpoint_path(hps.model_dir, "G_latest.pth"), net_g, None)
             _, _, _, epoch_str = utils.load_checkpoint(utils.latest_checkpoint_path(hps.model_dir, "D_latest.pth"), net_d, None)
             global_step = (epoch_str - 1) * len(train_loader)
             train_state = True
         except:
-            print("Failed to find latest checkpoint...")
             pass
         
         if not train_state:
             try:
-                print("Training with pretrained model...")
+                print("Training with model from pretrained_models...")
                 _, _, _, epoch_str = utils.load_checkpoint("./pretrained_models/G_latest.pth", net_g, None, True) # drop pretrained model speaker
                 _, _, _, epoch_str = utils.load_checkpoint("./pretrained_models/D_latest.pth", net_d, None, True) # drop pretrained model speaker
                 epoch_str = 1
                 global_step = 0
                 train_state = True
             except:
-                print("Failed to find pretrained model...")
                 pass
         
         if not train_state:
-            print("Training without pretrained or latest model...")
+            print("Training a new model...")
             epoch_str = 1
             global_step = 0
             train_state = True
@@ -235,7 +233,7 @@ def train_and_evaluate(rank, epoch, hps, nets, optims, schedulers, scaler, loade
         
         pbar.write(
             f"""
-            train -- epoch: {epoch}, loss_mel: {losses[3]:.5f}, loss_kl: {losses[5]:.5f}, loss_fm: {losses[2]:.5f}, lr: {lr:.5f}
+            step: {global_step}, loss_mel: {losses[3]:.5f}, loss_kl: {losses[5]:.5f}, loss_fm: {losses[2]:.5f}, lr: {lr:.7f}
             """
         )
 
@@ -265,13 +263,6 @@ def train_and_evaluate(rank, epoch, hps, nets, optims, schedulers, scaler, loade
         
         utils.save_checkpoint(net_d, None, hps.train.learning_rate, epoch,
                               os.path.join(hps.model_dir, "D_latest.pth"))
-        # save to google drive
-        if os.path.exists("./OUTPUT_MODEL/"):
-            utils.save_checkpoint(net_g, None, hps.train.learning_rate, epoch,
-                                  os.path.join("./OUTPUT_MODEL/", "G_latest.pth"))
-
-            utils.save_checkpoint(net_d, None, hps.train.learning_rate, epoch,
-                                  os.path.join("./OUTPUT_MODEL/", "D_latest.pth"))
         if hps.preserved > 0:
           utils.save_checkpoint(net_g, None, hps.train.learning_rate, epoch,
                                   os.path.join(hps.model_dir, "G_{}.pth".format(global_step)))
@@ -280,24 +271,20 @@ def train_and_evaluate(rank, epoch, hps, nets, optims, schedulers, scaler, loade
           old_g = utils.oldest_checkpoint_path(hps.model_dir, "G_[0-9]*.pth",
                                                preserved=hps.preserved)  # Preserve 4 (default) historical checkpoints.
           old_d = utils.oldest_checkpoint_path(hps.model_dir, "D_[0-9]*.pth", preserved=hps.preserved)
+          
           if os.path.exists(old_g):
             pbar.write(f"remove {old_g}")
             os.remove(old_g)
           if os.path.exists(old_d):
             pbar.write(f"remove {old_d}")
             os.remove(old_d)
-          if os.path.exists("./OUTPUT_MODEL/"):
-              utils.save_checkpoint(net_g, None, hps.train.learning_rate, epoch, os.path.join("./OUTPUT_MODEL/", "G_{}.pth".format(global_step)))
-              utils.save_checkpoint(net_d, None, hps.train.learning_rate, epoch, os.path.join("./OUTPUT_MODEL/", "D_{}.pth".format(global_step)))
-              old_g = utils.oldest_checkpoint_path("./OUTPUT_MODEL/", "G_[0-9]*.pth", preserved=hps.preserved)  # Preserve 4 (default) historical checkpoints.
-              old_d = utils.oldest_checkpoint_path("./OUTPUT_MODEL/", "D_[0-9]*.pth", preserved=hps.preserved)
-              if os.path.exists(old_g):
-                  pbar.write(f"remove {old_g}")
-                  os.remove(old_g)
-              if os.path.exists(old_d):
-                  pbar.write(f"remove {old_d}")
-                  os.remove(old_d)
+
+    if global_step > hps.max_steps:
+        pbar.write("Maximum steps reached, closing training...")
+        exit()
+    
     global_step += 1
+    
     if epoch > hps.max_epochs:
         pbar.write("Maximum epoch reached, closing training...")
         exit()
