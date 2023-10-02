@@ -1,11 +1,8 @@
-Cython==0.29.21
-librosa==0.9.2
+Cython
+librosa==0.8.1
 matplotlib
-scikit-learn
-scipy==1.8
-numpy==1.24
-tensorboard
-unidecode
-protobuf
-inflect
 deep-phonemizer
+Unidecode
+scipy
+inflect
+gdown
