@@ -89,7 +89,7 @@ def latest_checkpoint_path(dir_path, regex="G_[0-9]*.pth"):
     return x
 
 
-def oldest_checkpoint_path(dir_path, regex="G_[0-9]*.pth", preserved=4):
+def oldest_checkpoint_path(dir_path, regex="G_[0-9]*.pth", preserved=2):
     f_list = glob.glob(os.path.join(dir_path, regex))
     f_list.sort(key=lambda f: extract_digits(f))
     if len(f_list) > preserved:
@@ -183,7 +183,9 @@ def get_hparams(init=True):
     parser.add_argument('-m', '--model', type=str, default="OUTPUT_MODEL",
                         help='Model name')
     parser.add_argument('-n', '--max_epochs', type=int, default=5000,
-                        help='finetune epochs')
+                        help='max epochs')
+    parser.add_argument('-s', '--max_steps', type=int, default=100000,
+                        help='max steps')
     parser.add_argument('--preserved', type=int, default=4,
                         help='Number of preserved models')
 
@@ -208,6 +210,7 @@ def get_hparams(init=True):
     hparams = HParams(**config)
     hparams.model_dir = model_dir
     hparams.max_epochs = args.max_epochs
+    hparams.max_steps = args.max_steps
     hparams.preserved = args.preserved
     return hparams
 
