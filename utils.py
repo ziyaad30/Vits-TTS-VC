@@ -53,7 +53,7 @@ def load_checkpoint(checkpoint_path, model, optimizer=None, drop_speaker_emb=Fal
 
 
 def save_checkpoint(model, optimizer, learning_rate, iteration, checkpoint_path):
-    logger.info("Save model and optimizer state at epoch {} to {}".format(
+    logger.info("Save model and optimizer state at iteration {} to {}".format(
         iteration, checkpoint_path))
     if hasattr(model, 'module'):
         state_dict = model.module.state_dict()
