@@ -184,7 +184,7 @@ def get_hparams(init=True):
                         help='Model name')
     parser.add_argument('-n', '--max_epochs', type=int, default=5000,
                         help='max epochs')
-    parser.add_argument('-s', '--max_steps', type=int, default=20000,
+    parser.add_argument('-s', '--max_steps', type=int, default=50000,
                         help='max steps')
     parser.add_argument('--preserved', type=int, default=2,
                         help='Number of preserved models')
