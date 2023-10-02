@@ -1,4 +1,3 @@
-""" from https://github.com/keithito/tacotron """
 from text import cleaners
 from text.symbols import symbols, _pad
 import os
