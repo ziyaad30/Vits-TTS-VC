@@ -6,9 +6,6 @@ scipy==1.8
 numpy==1.24
 tensorboard
 unidecode
-jamo
-jieba
 protobuf
 inflect
-opencc==1.1.1
 deep-phonemizer
